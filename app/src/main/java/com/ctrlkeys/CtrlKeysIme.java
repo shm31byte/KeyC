@@ -116,7 +116,7 @@ public class CtrlKeysIme extends InputMethodService {
     private Button addKey(LinearLayout row, String label, Runnable action) {
         Button b = new Button(this);
         b.setText(label);
-        b.setTextAllCaps(false);
+        b.setAllCaps(false);
         b.setTextSize(15);
         b.setPadding(0, 0, 0, 0);
         b.setMinWidth(0);
