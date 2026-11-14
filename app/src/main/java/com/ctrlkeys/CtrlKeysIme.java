@@ -12,18 +12,12 @@ import android.view.inputmethod.InputConnection;
 import android.widget.Button;
 import android.widget.LinearLayout;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
-
 public class CtrlKeysIme extends InputMethodService {
     private LinearLayout keyboard;
     private boolean numbersOnTop = false;
     private boolean symbols = false;
     private boolean shift = false;
     private boolean ctrl = false;
-    private Button ctrlButton;
 
     @Override
     public View onCreateInputView() {
@@ -36,25 +30,34 @@ public class CtrlKeysIme extends InputMethodService {
         keyboard.setPadding(dp(4), dp(4), dp(4), dp(4));
         keyboard.setBackgroundColor(Color.rgb(225, 229, 235));
 
+        // Tombol untuk menukar baris khusus dengan baris angka
         LinearLayout switchRow = row();
-        addKey(switchRow, numbersOnTop ? "ABC" : "123",
+        addKey(
+                switchRow,
+                numbersOnTop ? "ABC" : "123",
                 () -> {
                     numbersOnTop = !numbersOnTop;
                     refreshKeyboard();
-                });
+                }
+        );
         keyboard.addView(switchRow);
 
+        // Baris Ctrl/Tab/Esc/panah atau angka 1–0
         LinearLayout topRow = row();
+
         if (numbersOnTop) {
             for (char c : "1234567890".toCharArray()) {
                 addKey(topRow, String.valueOf(c), () -> type(String.valueOf(c)));
             }
         } else {
-            ctrlButton = addKey(topRow, ctrl ? "Ctrl ✓" : "Ctrl",
+            addKey(
+                    topRow,
+                    ctrl ? "Ctrl ✓" : "Ctrl",
                     () -> {
                         ctrl = !ctrl;
                         refreshKeyboard();
-                    });
+                    }
+            );
             addKey(topRow, "Tab", () -> sendKey(KeyEvent.KEYCODE_TAB));
             addKey(topRow, "Esc", () -> sendKey(KeyEvent.KEYCODE_ESCAPE));
             addKey(topRow, "←", () -> sendKey(KeyEvent.KEYCODE_DPAD_LEFT));
@@ -62,165 +65,237 @@ public class CtrlKeysIme extends InputMethodService {
             addKey(topRow, "↑", () -> sendKey(KeyEvent.KEYCODE_DPAD_UP));
             addKey(topRow, "↓", () -> sendKey(KeyEvent.KEYCODE_DPAD_DOWN));
         }
+
         keyboard.addView(topRow);
 
+        // Baris huruf atau simbol
         if (!symbols) {
             addChars("qwertyuiop");
             addChars("asdfghjkl");
 
-            LinearLayout third = row();
-            addKey(third, "⇧", () -> {
-                shift = !shift;
-                refreshKeyboard();
-            });
+            LinearLayout thirdRow = row();
+
+            addKey(
+                    thirdRow,
+                    "⇧",
+                    () -> {
+                        shift = !shift;
+                        refreshKeyboard();
+                    }
+            );
+
             for (char c : "zxcvbnm".toCharArray()) {
-                addKey(third, String.valueOf(c), () -> typeLetter(c));
+                addKey(thirdRow, String.valueOf(c), () -> typeLetter(c));
             }
-            addKey(third, "⌫", () -> sendKey(KeyEvent.KEYCODE_DEL));
-            keyboard.addView(third);
+
+            addKey(thirdRow, "⌫", () -> sendKey(KeyEvent.KEYCODE_DEL));
+            keyboard.addView(thirdRow);
         } else {
             addChars("1234567890");
             addChars("@#$%&-*+=");
             addChars("()!?':;\"");
         }
 
-        LinearLayout bottom = row();
-        addKey(bottom, symbols ? "ABC" : "?123", () -> {
-            symbols = !symbols;
-            refreshKeyboard();
-        });
-        addKey(bottom, ",", () -> type(","));
-        addKey(bottom, "spasi", () -> type(" "));
-        addKey(bottom, ".", () -> type("."));
-        addKey(bottom, "↵", this::enter);
-        keyboard.addView(bottom);
+        // Baris bawah
+        LinearLayout bottomRow = row();
+
+        addKey(
+                bottomRow,
+                symbols ? "ABC" : "?123",
+                () -> {
+                    symbols = !symbols;
+                    refreshKeyboard();
+                }
+        );
+
+        addKey(bottomRow, ",", () -> type(","));
+        addKey(bottomRow, "spasi", () -> type(" "));
+        addKey(bottomRow, ".", () -> type("."));
+        addKey(bottomRow, "↵", this::enter);
+
+        keyboard.addView(bottomRow);
 
         return keyboard;
     }
 
     private void addChars(String chars) {
-        LinearLayout r = row();
+        LinearLayout keyRow = row();
+
         for (char c : chars.toCharArray()) {
-            addKey(r, String.valueOf(c), () -> typeLetter(c));
+            addKey(keyRow, String.valueOf(c), () -> typeLetter(c));
         }
-        keyboard.addView(r);
+
+        keyboard.addView(keyRow);
     }
 
     private LinearLayout row() {
-        LinearLayout r = new LinearLayout(this);
-        r.setOrientation(LinearLayout.HORIZONTAL);
-        r.setGravity(Gravity.CENTER);
-        return r;
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER);
+        return row;
     }
 
     private Button addKey(LinearLayout row, String label, Runnable action) {
-        Button b = new Button(this);
-        b.setText(label);
-        b.setAllCaps(false);
-        b.setTextSize(15);
-        b.setPadding(0, 0, 0, 0);
-        b.setMinWidth(0);
-        b.setMinimumWidth(0);
-        b.setBackground(roundRect(
-                label.startsWith("Ctrl") && ctrl
-                        ? Color.rgb(120, 170, 235)
-                        : Color.WHITE));
+        Button button = new Button(this);
+        button.setText(label);
+        button.setAllCaps(false);
+        button.setTextSize(15);
+        button.setPadding(0, 0, 0, 0);
+        button.setMinWidth(0);
+        button.setMinimumWidth(0);
 
-        LinearLayout.LayoutParams lp =
+        int color = label.startsWith("Ctrl") && ctrl
+                ? Color.rgb(120, 170, 235)
+                : Color.WHITE;
+
+        button.setBackground(roundRect(color));
+
+        LinearLayout.LayoutParams params =
                 new LinearLayout.LayoutParams(0, dp(48), 1f);
-        lp.setMargins(dp(2), dp(2), dp(2), dp(2));
-        row.addView(b, lp);
-        b.setOnClickListener(v -> action.run());
-        return b;
+        params.setMargins(dp(2), dp(2), dp(2), dp(2));
+        row.addView(button, params);
+
+        button.setOnClickListener(view -> action.run());
+        return button;
     }
 
     private GradientDrawable roundRect(int color) {
-        GradientDrawable d = new GradientDrawable();
-        d.setColor(color);
-        d.setCornerRadius(dp(7));
-        return d;
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(color);
+        drawable.setCornerRadius(dp(7));
+        return drawable;
     }
 
     private void typeLetter(char c) {
         if (ctrl) {
-            int code = letterKeyCode(Character.toUpperCase(c));
-            ctrl = false;
-            if (code != KeyEvent.KEYCODE_UNKNOWN) sendKeyWithCtrl(code);
-            refreshKeyboard();
+            int keyCode = letterKeyCode(Character.toUpperCase(c));
+
+            if (keyCode != KeyEvent.KEYCODE_UNKNOWN) {
+                sendKeyWithCtrl(keyCode);
+            }
+
+            // Ctrl sengaja tidak dimatikan di sini.
             return;
         }
 
-        char out = shift ? Character.toUpperCase(c) : c;
+        char output = shift ? Character.toUpperCase(c) : c;
         shift = false;
-        type(String.valueOf(out));
-    }
-
-    private void type(String text) {
-        InputConnection ic = getCurrentInputConnection();
-        if (ic != null) ic.commitText(text, 1);
-    }
-
-    private void sendKey(int keyCode) {
-        InputConnection ic = getCurrentInputConnection();
-        if (ic == null) return;
-
-        int meta = ctrl ? KeyEvent.META_CTRL_ON : 0;
-        long now = SystemClock.uptimeMillis();
-        ic.sendKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_DOWN,
-                keyCode, 0, meta));
-        ic.sendKeyEvent(new KeyEvent(now, SystemClock.uptimeMillis(),
-                KeyEvent.ACTION_UP, keyCode, 0, meta));
-
-        if (ctrl) {
-            ctrl = false;
-            refreshKeyboard();
-        }
-    }
-
-    private void sendKeyWithCtrl(int keyCode) {
-        InputConnection ic = getCurrentInputConnection();
-        if (ic == null) return;
-
-        long now = SystemClock.uptimeMillis();
-        int meta = KeyEvent.META_CTRL_ON;
-        ic.sendKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_DOWN,
-                keyCode, 0, meta));
-        ic.sendKeyEvent(new KeyEvent(now, SystemClock.uptimeMillis(),
-                KeyEvent.ACTION_UP, keyCode, 0, meta));
+        type(String.valueOf(output));
     }
 
     private int letterKeyCode(char c) {
-        switch (c) {
-            case 'A': return KeyEvent.KEYCODE_A;
-            case 'C': return KeyEvent.KEYCODE_C;
-            case 'V': return KeyEvent.KEYCODE_V;
-            default: return KeyEvent.KEYCODE_UNKNOWN;
+        return KeyEvent.keyCodeFromString("KEYCODE_" + c);
+    }
+
+    private void type(String text) {
+        InputConnection connection = getCurrentInputConnection();
+
+        if (connection != null) {
+            connection.commitText(text, 1);
         }
     }
 
+    private void sendKey(int keyCode) {
+        InputConnection connection = getCurrentInputConnection();
+
+        if (connection == null) {
+            return;
+        }
+
+        int metaState = ctrl ? KeyEvent.META_CTRL_ON : 0;
+        long now = SystemClock.uptimeMillis();
+
+        connection.sendKeyEvent(
+                new KeyEvent(
+                        now,
+                        now,
+                        KeyEvent.ACTION_DOWN,
+                        keyCode,
+                        0,
+                        metaState
+                )
+        );
+
+        connection.sendKeyEvent(
+                new KeyEvent(
+                        now,
+                        SystemClock.uptimeMillis(),
+                        KeyEvent.ACTION_UP,
+                        keyCode,
+                        0,
+                        metaState
+                )
+        );
+
+        // Ctrl sengaja tetap aktif setelah key event.
+    }
+
+    private void sendKeyWithCtrl(int keyCode) {
+        InputConnection connection = getCurrentInputConnection();
+
+        if (connection == null) {
+            return;
+        }
+
+        long now = SystemClock.uptimeMillis();
+        int metaState = KeyEvent.META_CTRL_ON;
+
+        connection.sendKeyEvent(
+                new KeyEvent(
+                        now,
+                        now,
+                        KeyEvent.ACTION_DOWN,
+                        keyCode,
+                        0,
+                        metaState
+                )
+        );
+
+        connection.sendKeyEvent(
+                new KeyEvent(
+                        now,
+                        SystemClock.uptimeMillis(),
+                        KeyEvent.ACTION_UP,
+                        keyCode,
+                        0,
+                        metaState
+                )
+        );
+    }
+
     private void enter() {
-        InputConnection ic = getCurrentInputConnection();
-        if (ic == null) return;
+        InputConnection connection = getCurrentInputConnection();
+
+        if (connection == null) {
+            return;
+        }
 
         EditorInfo info = getCurrentInputEditorInfo();
+
         if (info != null) {
             int action = info.imeOptions & EditorInfo.IME_MASK_ACTION;
+
             if (action != EditorInfo.IME_ACTION_NONE
                     && action != EditorInfo.IME_ACTION_UNSPECIFIED) {
-                ic.performEditorAction(action);
+                connection.performEditorAction(action);
                 return;
             }
         }
+
         sendKey(KeyEvent.KEYCODE_ENTER);
     }
 
     private void refreshKeyboard() {
-        if (keyboard == null) return;
-        View newKeyboard = buildKeyboard();
-        setInputView(newKeyboard);
+        if (keyboard == null) {
+            return;
+        }
+
+        setInputView(buildKeyboard());
     }
 
     private int dp(int value) {
-        return (int) (value * getResources().getDisplayMetrics().density);
+        return (int) (
+                value * getResources().getDisplayMetrics().density
+        );
     }
 }
